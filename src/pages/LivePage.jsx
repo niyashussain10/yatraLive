@@ -42,7 +42,7 @@ const reverseGeocode = async (lat, lng) => {
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&namedetails=1`,
       {
         headers: {
-          'User-Agent': 'YatraTracker/1.0' // Required by Nominatim
+          'User-Agent': 'YatraTracker/1.0'
         }
       }
     )
@@ -54,7 +54,6 @@ const reverseGeocode = async (lat, lng) => {
     
     const address = data.address
     
-    // Better priority for area names (especially for Bangalore)
     const place = 
       address.suburb ||
       address.neighbourhood ||
@@ -81,7 +80,7 @@ function RecenterMap({ lat, lng }) {
   const map = useMap()
   useEffect(() => {
     map.setView([lat, lng], map.getZoom(), { animate: true })
-  }, [lat, lng])
+  }, [lat, lng, map])
   return null
 }
 
@@ -99,22 +98,28 @@ function LivePage() {
 
   const labels = {
     en: {
-      title: 'Kanthapuram Usthad Kerala Yatra – Live Location',
-      moving: '🟢 Moving',
-      halted: '🔴 Halted',
-      share: 'Share Live Link',
+      title: 'Kanthapuram Usthad Kerala Yatra',
+      subtitle: 'Live Location',
+      moving: 'Moving',
+      halted: 'Stopped',
+      share: 'Share',
       nextDestination: 'Next Destination',
-      arrivalTime: 'Arrival Time',
-      note: 'Note',
+      arrivalTime: 'Approx Arrival',
+      currentDistrict: 'Current District',
+      district: 'District',
+      lastUpdated: 'Last updated',
     },
     ml: {
-      title: 'കാന്തപുരം ഉസ്താദ് കേരള യാത്ര – തത്സമയ സ്ഥാനം',
-      moving: '🟢 യാത്ര തുടരുന്നു',
-      halted: '🔴 നിർത്തിയിരിക്കുന്നു',
-      share: 'ലൈവ് ലിങ്ക് പങ്കിടുക',
+      title: 'കാന്തപുരം ഉസ്താദ് കേരള യാത്ര',
+      subtitle: 'തത്സമയ സ്ഥാനം',
+      moving: 'യാത്ര തുടരുന്നു',
+      halted: 'നിർത്തിയിരിക്കുന്നു',
+      share: 'പങ്കിടുക',
       nextDestination: 'അടുത്ത ലക്ഷ്യസ്ഥാനം',
       arrivalTime: 'എത്തുന്ന സമയം',
-      note: 'കുറിപ്പ്',
+      currentDistrict: 'നിലവിലെ ജില്ല',
+      district: 'ജില്ല',
+      lastUpdated: 'അവസാനം അപ്ഡേറ്റ്',
     },
   }
 
@@ -136,7 +141,6 @@ function LivePage() {
 
       if (isNaN(lat) || isNaN(lng)) return
 
-      // Use stored placeName and district if available, otherwise reverse geocode
       const placeName = locationData.placeName || ''
       const district = locationData.district || ''
       
@@ -158,11 +162,9 @@ function LivePage() {
           : new Date()
       )
 
-      // Use status from Firestore if available, otherwise calculate from movement
       if (locationData.status) {
         setStatus(locationData.status)
       } else {
-        // Auto-detect status from movement
         setPath((prev) => {
           if (prev.length === 0) {
             setStatus('MOVING')
@@ -173,10 +175,9 @@ function LivePage() {
           setStatus(dist < 20 ? 'HALTED' : 'MOVING')
           return [...prev.slice(-50), [lat, lng]]
         })
-        return // Exit early if auto-detecting
+        return
       }
 
-      // Update path for polyline (when status is from Firestore)
       setPath((prev) => {
         if (prev.length === 0) return [[lat, lng]]
         return [...prev.slice(-50), [lat, lng]]
@@ -222,59 +223,22 @@ function LivePage() {
   return (
     <div className="live-page">
       <header className="live-header">
-        <h1>{labels[lang].title}</h1>
-
-        {location?.placeName && (
-          <p className="current-location-name">
-            📍 {location.placeName}
-            {location.district && `, ${location.district}`}
-          </p>
-        )}
-
-        {nextDestination?.destination && (
-          <div className="next-destination-info">
-            <div className="destination-header">
-              <span className="destination-icon">🎯</span>
-              <strong>{labels[lang].nextDestination}</strong>
-            </div>
-            <p className="destination-name">{nextDestination.destination}</p>
-            {nextDestination.district && (
-              <p className="destination-district">{nextDestination.district}</p>
-            )}
-            {nextDestination.arrivalTime && (
-              <p className="destination-time">
-                <span className="time-icon">⏰</span>
-                <strong>{labels[lang].arrivalTime}:</strong> {nextDestination.arrivalTime}
-              </p>
-            )}
-            {nextDestination.note && (
-              <p className="destination-note">
-                <span className="note-icon">📝</span>
-                {nextDestination.note}
-              </p>
-            )}
+        <div className="header-content">
+          <div>
+            <h1>{labels[lang].title}</h1>
+            <p className="header-subtitle">{labels[lang].subtitle}</p>
           </div>
-        )}
-
-        <p className={status === 'MOVING' ? 'moving' : 'halted'}>
-          {status === 'MOVING'
-            ? labels[lang].moving
-            : labels[lang].halted}
-        </p>
-
-        {lastUpdated && (
-          <p className="last-updated">
-            Last updated {formatTimeAgo(secondsAgo)}
-          </p>
-        )}
-
-        <div className="top-actions">
-          <button onClick={() => setLang(lang === 'en' ? 'ml' : 'en')}>
-            🌐 EN / മലയാളം
-          </button>
-          <button onClick={shareLink}>🔗 {labels[lang].share}</button>
         </div>
       </header>
+
+      <div className="status-strip">
+        <span className={`status-dot ${status === 'MOVING' ? 'moving' : 'halted'}`}></span>
+        <span className="status-text">{status === 'MOVING' ? labels[lang].moving : labels[lang].halted}</span>
+        <span className="status-separator">|</span>
+        <span className="status-district">{location?.district || labels[lang].currentDistrict}</span>
+        <span className="status-separator">|</span>
+        <span className="status-time">{labels[lang].lastUpdated} {lastUpdated ? formatTimeAgo(secondsAgo) : '--'}</span>
+      </div>
 
       <main className="live-main">
         {error && <div className="error-message">{error}</div>}
@@ -288,13 +252,13 @@ function LivePage() {
             >
               <RecenterMap lat={location.lat} lng={location.lng} />
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Polyline positions={path} color="blue" />
+              {path.length > 1 && <Polyline positions={path} color="#22c55e" weight={4} opacity={0.8} />}
               <Marker position={[location.lat, location.lng]}>
                 <Popup>
                   <div className="popup-content">
-                    <strong>📍 {location.placeName || 'Current Location'}</strong>
+                    <strong>{location.placeName || 'Current Location'}</strong>
                     {location.district && (
-                      <p className="popup-location-name">{location.district}</p>
+                      <p>{location.district}</p>
                     )}
                     <p className="coordinates">
                       {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
@@ -307,8 +271,41 @@ function LivePage() {
         )}
       </main>
 
+      {nextDestination?.destination && (
+        <div className="destination-card">
+          <div className="destination-row">
+            <span className="destination-label">{labels[lang].nextDestination}</span>
+            <span className="destination-value">{nextDestination.destination}</span>
+          </div>
+          {nextDestination.district && (
+            <div className="destination-row">
+              <span className="destination-label">{labels[lang].district}</span>
+              <span className="destination-value">{nextDestination.district}</span>
+            </div>
+          )}
+          {nextDestination.arrivalTime && (
+            <div className="destination-row">
+              <span className="destination-label">{labels[lang].arrivalTime}</span>
+              <span className="destination-value">{nextDestination.arrivalTime}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <footer className="live-footer">
-        Live location shown for public convenience. Location is approximate.
+        <div className="footer-content">
+          <p className="footer-disclaimer">
+            Live location shown for public convenience. Location is approximate.
+          </p>
+          <div className="footer-actions">
+            <button className="footer-btn" onClick={() => setLang(lang === 'en' ? 'ml' : 'en')}>
+              {lang === 'en' ? 'മലയാളം' : 'EN'}
+            </button>
+            <button className="footer-btn" onClick={shareLink}>
+              {labels[lang].share}
+            </button>
+          </div>
+        </div>
       </footer>
     </div>
   )
