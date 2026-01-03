@@ -61,7 +61,7 @@ export async function getNextDestination() {
 /**
  * Update next destination in Firestore
  */
-export async function updateNextDestination(destination, district, arrivalTime, note) {
+export async function updateNextDestination(destination, district, arrivalTime, note, lat = null, lng = null) {
   try {
     const docRef = doc(db, 'yatraSchedule', 'next')
     await setDoc(docRef, {
@@ -69,6 +69,8 @@ export async function updateNextDestination(destination, district, arrivalTime, 
       district: district || '',
       arrivalTime: arrivalTime || '',
       note: note || '',
+      lat: lat || null,
+      lng: lng || null,
       lastUpdated: serverTimestamp()
     })
     return true

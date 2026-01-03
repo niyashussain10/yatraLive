@@ -1,12 +1,51 @@
 /**
- * Reverse geocoding utility using OpenStreetMap Nominatim API
- * Gets location name from coordinates with improved accuracy
+ * Geocode an address to get coordinates
+ * Uses Nominatim (OpenStreetMap) - free and no API key required
  */
+export async function geocodeAddress(address) {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&addressdetails=1`,
+      {
+        headers: {
+          'User-Agent': 'YatraTracker/1.0'
+        }
+      }
+    )
 
+    if (!response.ok) {
+      throw new Error('Failed to geocode address')
+    }
+
+    const data = await response.json()
+    
+    if (data && data.length > 0) {
+      const result = data[0]
+      return {
+        lat: parseFloat(result.lat),
+        lng: parseFloat(result.lon),
+        displayName: result.display_name,
+        address: result.address || {}
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error geocoding address:', error)
+    throw error
+  }
+}
+
+/**
+ * Get location name from coordinates
+ */
 export async function getLocationName(lat, lng) {
   try {
-    const result = await getLocationDetails(lat, lng)
-    return result.place || result.district || 'Unknown Location'
+    const details = await getLocationDetails(lat, lng)
+    if (details.place) {
+      return details.place
+    }
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
   } catch (error) {
     console.error('Error getting location name:', error)
     return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
@@ -57,4 +96,3 @@ export async function getLocationDetails(lat, lng) {
     return { place: '', district: '' }
   }
 }
-

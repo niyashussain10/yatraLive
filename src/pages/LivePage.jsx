@@ -7,9 +7,10 @@ import {
   Polyline,
   useMap,
 } from 'react-leaflet'
-import { Icon } from 'leaflet'
+import { Icon, divIcon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getLiveLocation, getNextDestination } from '../firebase/firestore'
+import { getRoute } from '../utils/routing'
 import './LivePage.css'
 
 // Fix for default marker icon
@@ -87,12 +88,15 @@ function RecenterMap({ lat, lng }) {
 // ---------- main ----------
 function LivePage() {
   const [location, setLocation] = useState(null)
+  const [userLocation, setUserLocation] = useState(null)
   const [nextDestination, setNextDestination] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [secondsAgo, setSecondsAgo] = useState(0)
   const [error, setError] = useState(null)
 
   const [path, setPath] = useState([])
+  const [routePath, setRoutePath] = useState(null)
+  const [routeDistance, setRouteDistance] = useState(null)
   const [status, setStatus] = useState('MOVING')
   const [lang, setLang] = useState('en')
 
@@ -108,6 +112,8 @@ function LivePage() {
       currentDistrict: 'Current District',
       district: 'District',
       lastUpdated: 'Last updated',
+      distance: 'Distance',
+      yourLocation: 'Your Location',
     },
     ml: {
       title: 'കാന്തപുരം ഉസ്താദ് കേരള യാത്ര',
@@ -120,6 +126,8 @@ function LivePage() {
       currentDistrict: 'നിലവിലെ ജില്ല',
       district: 'ജില്ല',
       lastUpdated: 'അവസാനം അപ്ഡേറ്റ്',
+      distance: 'ദൂരം',
+      yourLocation: 'നിങ്ങളുടെ സ്ഥാനം',
     },
   }
 
@@ -189,10 +197,76 @@ function LivePage() {
     }
   }
 
+  // Fetch route when both location and destination are available
+  useEffect(() => {
+    const fetchRoute = async () => {
+      if (location && nextDestination?.lat && nextDestination?.lng) {
+        try {
+          const route = await getRoute(
+            location.lat,
+            location.lng,
+            nextDestination.lat,
+            nextDestination.lng
+          )
+          if (route) {
+            setRoutePath(route.path)
+            setRouteDistance(route.distance)
+          } else {
+            // Fallback to straight line if routing fails
+            setRoutePath(null)
+            setRouteDistance(null)
+          }
+        } catch (err) {
+          console.error('Error fetching route:', err)
+          setRoutePath(null)
+          setRouteDistance(null)
+        }
+      } else {
+        setRoutePath(null)
+        setRouteDistance(null)
+      }
+    }
+
+    fetchRoute()
+  }, [location, nextDestination])
+
   useEffect(() => {
     fetchLocation()
     const i = setInterval(fetchLocation, 12000)
     return () => clearInterval(i)
+  }, [])
+
+  // Get user's current location
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.log('Geolocation is not supported by your browser')
+      return
+    }
+
+    const getUserLocation = () => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          })
+        },
+        (err) => {
+          console.log('Error getting user location:', err.message)
+          // Don't show error to user, just silently fail
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000, // Cache for 1 minute
+        }
+      )
+    }
+
+    getUserLocation()
+    // Update user location every 30 seconds
+    const userLocationInterval = setInterval(getUserLocation, 30000)
+    return () => clearInterval(userLocationInterval)
   }, [])
 
   useEffect(() => {
@@ -266,6 +340,98 @@ function LivePage() {
                   </div>
                 </Popup>
               </Marker>
+              {userLocation && (
+                <Marker 
+                  position={[userLocation.lat, userLocation.lng]}
+                  icon={divIcon({
+                    className: 'user-location-marker',
+                    html: `<div style="
+                      width: 20px;
+                      height: 20px;
+                      background-color: #3b82f6;
+                      border: 3px solid white;
+                      border-radius: 50%;
+                      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    "></div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10],
+                    popupAnchor: [0, -10]
+                  })}
+                >
+                  <Popup>
+                    <div className="popup-content">
+                      <strong>{labels[lang].yourLocation}</strong>
+                      <p className="coordinates">
+                        {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+              {nextDestination?.lat && nextDestination?.lng && location && (
+                <>
+                  {routePath && routePath.length > 0 ? (
+                    <Polyline 
+                      positions={routePath} 
+                      color="#1a73e8" 
+                      weight={7} 
+                      opacity={1.0}
+                    />
+                  ) : (
+                    <Polyline 
+                      positions={[[location.lat, location.lng], [nextDestination.lat, nextDestination.lng]]} 
+                      color="#1a73e8" 
+                      weight={4} 
+                      opacity={0.8}
+                      dashArray="10, 5"
+                    />
+                  )}
+                  <Marker 
+                    position={[nextDestination.lat, nextDestination.lng]}
+                    icon={divIcon({
+                      className: 'destination-marker',
+                      html: `<div style="
+                        width: 24px;
+                        height: 24px;
+                        background-color: #1a73e8;
+                        border: 3px solid white;
+                        border-radius: 50%;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 14px;
+                        font-weight: bold;
+                        color: white;
+                      ">🎯</div>`,
+                      iconSize: [26, 26],
+                      iconAnchor: [13, 13],
+                      popupAnchor: [0, -13]
+                    })}
+                  >
+                    <Popup>
+                      <div className="popup-content">
+                        <strong>{nextDestination.destination || 'Destination'}</strong>
+                        {nextDestination.district && (
+                          <p>{nextDestination.district}</p>
+                        )}
+                        <p className="coordinates">
+                          {nextDestination.lat.toFixed(4)}, {nextDestination.lng.toFixed(4)}
+                        </p>
+                        {location && (
+                          <p className="distance-info">
+                            <strong>{labels[lang].distance}:</strong> {
+                              routeDistance 
+                                ? (routeDistance / 1000).toFixed(1)
+                                : (haversine(location.lat, location.lng, nextDestination.lat, nextDestination.lng) / 1000).toFixed(1)
+                            } km {routeDistance ? '(via road)' : '(straight line)'}
+                          </p>
+                        )}
+                      </div>
+                    </Popup>
+                  </Marker>
+                </>
+              )}
             </MapContainer>
           </div>
         )}
@@ -287,6 +453,17 @@ function LivePage() {
             <div className="destination-row">
               <span className="destination-label">{labels[lang].arrivalTime}</span>
               <span className="destination-value">{nextDestination.arrivalTime}</span>
+            </div>
+          )}
+          {nextDestination?.lat && nextDestination?.lng && location && (
+            <div className="destination-row">
+              <span className="destination-label">{labels[lang].distance}</span>
+              <span className="destination-value">
+                {routeDistance 
+                  ? `${(routeDistance / 1000).toFixed(1)} km (via road)`
+                  : `${(haversine(location.lat, location.lng, nextDestination.lat, nextDestination.lng) / 1000).toFixed(1)} km (straight line)`
+                }
+              </span>
             </div>
           )}
         </div>

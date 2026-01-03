@@ -9,14 +9,15 @@
   color: #f1f5f9;
 }
 
-/* Header - Compact, left-aligned, solid background */
+/* Header - Enhanced with more details */
 .live-header {
-  background: #0f172a;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #f1f5f9;
-  padding: 16px 20px;
-  border-bottom: 1px solid #334155;
+  padding: 20px 24px;
+  border-bottom: 2px solid #334155;
   position: relative;
   z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .header-content {
@@ -26,67 +27,78 @@
 }
 
 .live-header h1 {
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 22px;
+  font-weight: 700;
   margin: 0;
   color: #f1f5f9;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
 }
 
 .header-subtitle {
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 2px 0 0 0;
-  font-weight: 400;
+  font-size: 14px;
+  color: #cbd5e1;
+  margin: 6px 0 0 0;
+  font-weight: 500;
+  letter-spacing: 0.2px;
 }
 
-/* Status Strip - Single horizontal bar */
+/* Status Strip - Enhanced with better visibility */
 .status-strip {
   background: #1e293b;
   border-bottom: 1px solid #334155;
-  padding: 10px 20px;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
+  gap: 12px;
+  font-size: 15px;
   color: #cbd5e1;
   white-space: nowrap;
   overflow-x: auto;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
 }
 
 .status-dot.moving {
   background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
 }
 
 .status-dot.halted {
   background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
 }
 
 .status-text {
-  font-weight: 500;
+  font-weight: 600;
   color: #f1f5f9;
+  font-size: 15px;
 }
 
 .status-separator {
   color: #475569;
-  margin: 0 4px;
+  margin: 0 6px;
+  font-weight: 300;
 }
 
 .status-district {
   color: #cbd5e1;
+  font-weight: 500;
+  font-size: 15px;
 }
 
 .status-time {
   color: #94a3b8;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* Main area - Map focus */
@@ -164,20 +176,54 @@
   font-family: 'Courier New', monospace;
 }
 
-/* Destination Card - Simple and clean */
-.destination-card {
-  background: #0f172a;
+.distance-info {
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid #334155;
-  padding: 16px 20px;
-  font-size: 13px;
+  color: #f1f5f9;
+}
+
+.distance-info strong {
+  color: #1a73e8;
+  font-weight: 700;
+}
+
+/* Destination Card - Enhanced visibility */
+.destination-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-top: 3px solid #1a73e8;
+  border-left: 5px solid #1a73e8;
+  padding: 22px 26px;
+  font-size: 14px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(26, 115, 232, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  margin-top: 0;
+  position: relative;
+}
+
+.destination-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1a73e8 0%, #4285F4 100%);
 }
 
 .destination-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #1e293b;
+  padding: 12px 0;
+  border-bottom: 1px solid #334155;
+  transition: background-color 0.2s;
+}
+
+.destination-row:hover {
+  background-color: rgba(26, 115, 232, 0.05);
+  margin: 0 -24px;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 .destination-row:last-child {
@@ -186,13 +232,17 @@
 
 .destination-label {
   color: #94a3b8;
-  font-weight: 400;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.2px;
 }
 
 .destination-value {
   color: #f1f5f9;
-  font-weight: 500;
+  font-weight: 700;
+  font-size: 15px;
   text-align: right;
+  letter-spacing: 0.1px;
 }
 
 /* Footer - Small text, secondary buttons */
@@ -260,22 +310,46 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .live-header {
+    padding: 16px 20px;
+  }
+
   .live-header h1 {
-    font-size: 16px;
+    font-size: 20px;
   }
 
   .header-subtitle {
-    font-size: 11px;
+    font-size: 13px;
+    margin-top: 4px;
   }
 
   .status-strip {
-    font-size: 13px;
-    padding: 8px 16px;
+    font-size: 14px;
+    padding: 12px 20px;
+    gap: 10px;
+  }
+
+  .status-dot {
+    width: 9px;
+    height: 9px;
   }
 
   .destination-card {
-    padding: 12px 16px;
-    font-size: 12px;
+    padding: 18px 20px;
+    font-size: 13px;
+    border-left-width: 3px;
+  }
+
+  .destination-row {
+    padding: 10px 0;
+  }
+
+  .destination-label {
+    font-size: 13px;
+  }
+
+  .destination-value {
+    font-size: 14px;
   }
 
   .footer-content {

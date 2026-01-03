@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { updateLiveLocation, updateNextDestination } from '../firebase/firestore'
-import { getLocationDetails } from '../utils/geocoding'
+import { getLocationDetails, geocodeAddress } from '../utils/geocoding'
 import './UpdatePage.css'
 
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '1234'
@@ -25,6 +25,10 @@ function UpdatePage() {
   const [arrivalTime, setArrivalTime] = useState('')
   const [note, setNote] = useState('')
   const [isSavingDestination, setIsSavingDestination] = useState(false)
+  const [destinationSearch, setDestinationSearch] = useState('')
+  const [destinationCoords, setDestinationCoords] = useState(null)
+  const [isGeocoding, setIsGeocoding] = useState(false)
+  const [geocodeError, setGeocodeError] = useState(null)
 
   // Kerala districts list
   const keralaDistricts = [
@@ -138,19 +142,74 @@ function UpdatePage() {
     }
   }
 
+  const handleDestinationSearch = async () => {
+    if (!destinationSearch.trim()) {
+      setGeocodeError('Please enter a destination to search')
+      return
+    }
+
+    setIsGeocoding(true)
+    setGeocodeError(null)
+    
+    try {
+      const result = await geocodeAddress(destinationSearch)
+      if (result) {
+        setDestinationCoords({ lat: result.lat, lng: result.lng })
+        setDestination(result.displayName)
+        // Try to extract district from address
+        if (result.address) {
+          const district = result.address.state_district || 
+                          result.address.county || 
+                          result.address.city || 
+                          result.address.town || ''
+          if (district) {
+            setDestDistrict(district)
+          }
+        }
+        setGeocodeError(null)
+      } else {
+        setGeocodeError('Location not found. Please try a different search term.')
+      }
+    } catch (err) {
+      setGeocodeError(`Error searching location: ${err.message}`)
+    } finally {
+      setIsGeocoding(false)
+    }
+  }
+
   const saveDestination = async (e) => {
     e.preventDefault()
     setIsSavingDestination(true)
     setError(null)
     
     try {
-      await updateNextDestination(destination, destDistrict, arrivalTime, note)
+      // If we have coordinates, use them; otherwise try to geocode the destination name
+      let lat = destinationCoords?.lat || null
+      let lng = destinationCoords?.lng || null
+      
+      // If no coordinates but we have a destination name, try to geocode it
+      if (!lat && !lng && destination.trim()) {
+        try {
+          const geocodeResult = await geocodeAddress(destination)
+          if (geocodeResult) {
+            lat = geocodeResult.lat
+            lng = geocodeResult.lng
+          }
+        } catch (geocodeErr) {
+          console.warn('Could not geocode destination:', geocodeErr)
+          // Continue without coordinates
+        }
+      }
+      
+      await updateNextDestination(destination, destDistrict, arrivalTime, note, lat, lng)
       setStatus('Next destination saved successfully')
       // Clear form
       setDestination('')
       setDestDistrict('')
       setArrivalTime('')
       setNote('')
+      setDestinationSearch('')
+      setDestinationCoords(null)
     } catch (err) {
       setError(`Error saving destination: ${err.message}`)
     } finally {
@@ -326,10 +385,41 @@ function UpdatePage() {
 
         <div className="destination-section">
           <h2>Next Destination</h2>
+          <div className="destination-search-section">
+            <div className="search-input-group">
+              <input
+                type="text"
+                placeholder="Search location (e.g., Kanthapuram, Kerala or address)"
+                value={destinationSearch}
+                onChange={(e) => setDestinationSearch(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleDestinationSearch()
+                  }
+                }}
+                className="form-input"
+              />
+              <button
+                type="button"
+                onClick={handleDestinationSearch}
+                className="btn-search"
+                disabled={isGeocoding}
+              >
+                {isGeocoding ? 'Searching...' : '🔍 Search'}
+              </button>
+            </div>
+            {geocodeError && <p className="error-small">{geocodeError}</p>}
+            {destinationCoords && (
+              <p className="success-small">
+                ✓ Location found: {destinationCoords.lat.toFixed(4)}, {destinationCoords.lng.toFixed(4)}
+              </p>
+            )}
+          </div>
           <form onSubmit={saveDestination} className="destination-form">
             <input
               type="text"
-              placeholder="Destination (e.g., Kanthapuram)"
+              placeholder="Destination (auto-filled from search or enter manually)"
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               className="form-input"
