@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Live location - public read, write until Jan 20, 2026
+    match /liveLocation/current {
+      allow read: if true;
+      allow write: if request.time < timestamp.date(2026, 1, 20);
+    }
+    
+    // Yatra schedule - public read, write until Jan 20, 2026
+    match /yatraSchedule/next {
+      allow read: if true;
+      allow write: if request.time < timestamp.date(2026, 1, 20);
+    }
+  }
+}
+
