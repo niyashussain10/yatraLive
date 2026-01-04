@@ -1,6 +1,6 @@
-# Kanthapuram Usthad Kerala Yatra - Live Location Tracker
+ Yatra - Live Location Tracker
 
-A production-ready React web app for tracking and displaying live location of a religious yatra using Firebase Firestore and Leaflet maps.
+A production-ready React web app for tracking and displaying live location of a yatra using Firebase Firestore and Leaflet maps.
 
 ## Features
 
